@@ -24,7 +24,7 @@ setup(
     license="MIT license",
     description="china gm cryptography such as sm2,sm3,sm4",
     long_description=readme + '\n\n' + history,
-    long_description_content_type='text/rst',
+    long_description_content_type='text/x-rst',
     url='https://github.com/hanzhichao/sm-crypto',
     install_requires=requirements,
     include_package_data=True,

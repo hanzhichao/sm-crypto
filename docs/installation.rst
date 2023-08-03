@@ -12,7 +12,7 @@ To install sm-crypto, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install sm_crypto
+    $ pip install sm-crypto
 
 This is the preferred method to install sm-crypto, as it will always install the most recent stable release.
 
@@ -32,13 +32,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/hanzhichao/sm_crypto
+    $ git clone git://github.com/hanzhichao/sm-crypto
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl -OJL https://github.com/hanzhichao/sm_crypto/tarball/master
+    $ curl -OJL https://github.com/hanzhichao/sm-crypto/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/hanzhichao/sm_crypto
-.. _tarball: https://github.com/hanzhichao/sm_crypto/tarball/master
+.. _Github repo: https://github.com/hanzhichao/sm-crypto
+.. _tarball: https://github.com/hanzhichao/sm-crypto/tarball/main

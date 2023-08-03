@@ -66,9 +66,9 @@ class TestPublicKey:
         msg = b'test'
         k = 'c1cca047579c0c7a1b2afbade295abf19a1270b70ca0c9091facdcc65e3f7688'
         result = public_key.encrypt(msg, k=k, mode=1)
-        assert result.hex() == '083562e4aaf52a6a886c8b9771f25060a89d8c1a5494b6258028cefed693af3b1e6ff607e0af304c0632cb' \
-                               '6646ffd63113cf8b81b0605e98d00119832f0104f0183d6f0b7ef02a21244c4558ca381867ad8547f43f95' \
-                               '936ea824d6b6638d893f20a248c7'
+        assert result.hex() == '083562e4aaf52a6a886c8b9771f25060a89d8c1a5494b6258028cefed693af3b1e6ff607e0af30' \
+                               '4c0632cb6646ffd63113cf8b81b0605e98d00119832f0104f0183d6f0b7ef02a21244c4558ca38' \
+                               '1867ad8547f43f95936ea824d6b6638d893f20a248c7'
 
 
 class TestPrivateKey:
@@ -87,9 +87,6 @@ class TestPrivateKey:
                             '16562313134393730383962343336303930623333653665646339306562343620ccf4bd8f06320b434841494'
                             'e5f51554552593a0e4745545f434841494e5f494e464f')
         k = '277e11bb58bdec2f681fdb0d9fade5e37d0b2498980ba654321b9a7dffca526b'
-
-        pub_x = 49110848855854122087400474390854578950397421767862033455852018211610919297272
-        pub_y = 24086354037272140018102663687508212818310908102351095832747406862248831192103
 
         private_key = sm2.Sm2PrivateKey(int_to_hex(D))
         sig = private_key.sign_with_sm3(msg, k)
@@ -126,12 +123,13 @@ class TestPrivateKey:
         assert 64301789367307795946626421726693283401539325311527486667347093461494914687004 == sig.r
         assert 3896518202194914234585643109693938890529765912665548031832166116534576640790 == sig.s
         sign_bytes = sig.asn1_dump()
-        assert sign_bytes.hex() == '30450221008e2985e636d9291edaa31361cbf92cb9e6064060d710a7c3c59ea7c1f1fd201c0220089d5' \
-                                   '9e4d1872a0e150d4a03ac190b4d5296729d45d86d4db904584af1227316'
+        assert sign_bytes.hex() == '30450221008e2985e636d9291edaa31361cbf92cb9e6064060d710a7c3c59ea7c1f1fd2' \
+                                   '01c0220089d59e4d1872a0e150d4a03ac190b4d5296729d45d86d4db904584af1227316'
 
     def test_decrypt(self, private_key):
         data = bytes.fromhex(
-            '083562e4aaf52a6a886c8b9771f25060a89d8c1a5494b6258028cefed693af3b1e6ff607e0af304c0632cb6646ffd63113cf8b81b0605e98d00119832f0104f0183d6f0b7ef02a21244c4558ca381867ad8547f43f95936ea824d6b6638d893f20a248c7')
+            '083562e4aaf52a6a886c8b9771f25060a89d8c1a5494b6258028cefed693af3b1e6ff607e0af304c0632cb6646ffd63113cf'
+            '8b81b0605e98d00119832f0104f0183d6f0b7ef02a21244c4558ca381867ad8547f43f95936ea824d6b6638d893f20a248c7')
         msg = private_key.decrypt(data, mode=1)
         assert msg == b'test'
 
@@ -163,8 +161,8 @@ class TestPoint:
         P2 = G * k
         assert curve.is_on_curve(P2.x, P2.y)
 
-        P1 = '460333f094dcda438a35cb64ced03d04cc3694b598edb055056ce93c2149c0a8255130b63b4b096c29c4db80148d27a1c3944a466' \
-             'd14b8f8f9aac68d35a2d1fb'
+        P1 = '460333f094dcda438a35cb64ced03d04cc3694b598edb055056ce93c2149c0a8' \
+             '255130b63b4b096c29c4db80148d27a1c3944a466d14b8f8f9aac68d35a2d1fb'
         assert int_to_hex(P2.x) + int_to_hex(P2.y) == P1
 
     def test_right_mul(self, G, curve):
@@ -173,8 +171,8 @@ class TestPoint:
 
         P2 = k * G
         assert curve.is_on_curve(P2.x, P2.y)
-        P1 = '460333f094dcda438a35cb64ced03d04cc3694b598edb055056ce93c2149c0a8255130b63b4b096c29c4db80148d27a1c3944a4' \
-             '66d14b8f8f9aac68d35a2d1fb'
+        P1 = '460333f094dcda438a35cb64ced03d04cc3694b598edb055056ce93c2149c0a8' \
+             '255130b63b4b096c29c4db80148d27a1c3944a466d14b8f8f9aac68d35a2d1fb'
 
         assert int_to_hex(P2.x) + int_to_hex(P2.y) == P1
 
@@ -204,7 +202,6 @@ class TestSM2P256Curve:
         P2 = curve.double(P1)
         x2 = hex_to_int(P2[:64])
         y2 = hex_to_int(P2[64:128])
-        z2 = P2[128:]
         assert curve.is_on_curve(x2, y2)
 
 

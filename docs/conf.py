@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# sm_crypto documentation build configuration file, created by
+# sm-crypto documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun  9 13:47:02 2017.
 #
 # This file is execfile()d with the current directory set to its

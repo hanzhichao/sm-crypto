@@ -5,8 +5,9 @@
 
 import binascii
 from math import ceil
+from typing import Union, List
 
-from .utils import rotl
+from .utils import rotl, hex_to_int, bytes_to_list
 
 IV = [
     1937774191, 1226093241, 388252375, 3666478592,
@@ -66,12 +67,10 @@ def sm3_cf(v_i, b_i):
     for j in range(16, 68):
         w.append(0)
         w[j] = sm3_p_1(w[j - 16] ^ w[j - 9] ^ (rotl(w[j - 3], 15 % 32))) ^ (rotl(w[j - 13], 7 % 32)) ^ w[j - 6]
-        str1 = "%08x" % w[j]
     w_1 = []
     for j in range(0, 64):
         w_1.append(0)
         w_1[j] = w[j] ^ w[j + 4]
-        str1 = "%08x" % w_1[j]
 
     a, b, c, d, e, f, g, h = v_i
 
@@ -100,16 +99,14 @@ def sm3_cf(v_i, b_i):
     return [v_j[i] ^ v_i[i] for i in range(8)]
 
 
-def sm3_hash(msg: bytes)->str: # todo fixme
+def sm3_hash(msg: Union[bytes, List[int]]) -> str:  # todo fixme
     """
     SM3 Hash加密
     :param msg: 待加密消息
     :return: 加密后消息的hex字符串
     """
-    if isinstance(msg, list):
-        msg = msg
-    else:
-        msg = [i for i in msg]  # msg_digest to list  bytes--> List[int]
+    if isinstance(msg, bytes):
+        msg = bytes_to_list(msg)  # msg_digest to list  bytes--> List[int]
     len1 = len(msg)
     reserve1 = len1 % 64
     msg.append(0x80)
@@ -164,14 +161,14 @@ def sm3_kdf(z: bytes, klen: int):  # z为16进制表示的比特串（str），k
 
 
 def sm3_hmac(data: bytes, key: str):  # key: hex string
-    l = len(key) // 2
-    if l > 64:
+    key_length = len(key) // 2
+    if key_length > 64:
         key = sm3_hash(bytes.fromhex(key))
 
     key = key.ljust(128, '0')
     opad, ipad = '5c' * 64, '36' * 64
-    ipadkey = '%x' % (int(key, 16) ^ int(ipad, 16))  # hex string
-    M = sm3_hash(bytes.fromhex(ipadkey) + data)    # hex string
-    opadkey = '%x' % (int(key, 16) ^ int(opad, 16))  # hex string
-    out_data = sm3_hash(bytes.fromhex(opadkey) + bytes.fromhex(M))
+    ipad_key = '%x' % (hex_to_int(key) ^ hex_to_int(ipad))  # hex string
+    M = sm3_hash(bytes.fromhex(ipad_key) + data)  # hex string
+    opad_key = '%x' % (hex_to_int(key) ^ hex_to_int(opad))  # hex string
+    out_data = sm3_hash(bytes.fromhex(opad_key) + bytes.fromhex(M))
     return out_data

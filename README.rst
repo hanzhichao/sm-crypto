@@ -3,19 +3,19 @@ sm-crypto
 =========
 
 
-.. image:: https://img.shields.io/pypi/v/sm_crypto.svg
-        :target: https://pypi.python.org/pypi/sm_crypto
+.. image:: https://img.shields.io/pypi/v/sm-crypto.svg
+        :target: https://pypi.python.org/pypi/sm-crypto
 
-.. image:: https://img.shields.io/travis/hanzhichao/sm_crypto.svg
-        :target: https://travis-ci.com/hanzhichao/sm_crypto
+.. image:: https://img.shields.io/travis/hanzhichao/sm-crypto.svg
+        :target: https://travis-ci.com/hanzhichao/sm-crypto
 
 .. image:: https://readthedocs.org/projects/sm-crypto/badge/?version=latest
         :target: https://sm-crypto.readthedocs.io/en/latest/?version=latest
         :alt: Documentation Status
 
 
-.. image:: https://pyup.io/repos/github/hanzhichao/sm_crypto/shield.svg
-     :target: https://pyup.io/repos/github/hanzhichao/sm_crypto/
+.. image:: https://pyup.io/repos/github/hanzhichao/sm-crypto/shield.svg
+     :target: https://pyup.io/repos/github/hanzhichao/sm-crypto/
      :alt: Updates
 
 

@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # @FileName     :   ec.py
-# @Function     :   椭圆曲线算法 参考Crypto实现 https://github.com/ashutosh1206/Crypton/blob/master/Elliptic-Curves/ellipticcurve.py
+# @Function     :   椭圆曲线算法
+# 参考Crypto实现 https://github.com/ashutosh1206/Crypton/blob/master/Elliptic-Curves/ellipticcurve.py
+from typing import Optional
 
-hex2int = lambda hex_str: int(hex_str, 16)
+from .utils import hex_to_int
 
 
 def inverse_mod(a, m):
-    if a < 0 or m <= a: a = a % m
+    if a < 0 or m <= a:
+        a = a % m
     c, d = a, m
     uc, vc, ud, vd = 1, 0, 0, 1
     while c != 0:
@@ -49,7 +52,7 @@ class CurveFp:
         :return: 在曲线上返回True, 否则返回False
         """
         # _verify if y^2 - (x^3 + ax + b) is a multiple of p,
-        a, b, p = hex2int(self.a), hex2int(self.b), hex2int(self.p)
+        a, b, p = hex_to_int(self.a), hex_to_int(self.b), hex_to_int(self.p)
 
         # (y^2 - x^3 - a - b ) % p == 0
         return (y ** 2 - x ** 3 - a * x - b) % p == 0
@@ -58,7 +61,9 @@ class CurveFp:
 class Point:
     """有限领Fp曲线Curve上的点"""
 
-    def __init__(self, curve: CurveFp, x: int, y: int, order=None):
+    def __init__(self, curve: Optional[CurveFp],
+                 x: Optional[int], y: Optional[int],
+                 order=None):
         self.curve = curve
         self.x = x
         self.y = y
@@ -78,7 +83,7 @@ class Point:
             return other
         assert self.curve == other.curve, '两个点不在同一条曲线上'
 
-        p = hex2int(self.curve.p)  # 16进制字符串转int
+        p = hex_to_int(self.curve.p)  # 16进制字符串转int
 
         if self.x == other.x:
             if (self.y + other.y) % p == 0:
@@ -157,12 +162,12 @@ class Point:
         if self == INFINITY:
             return INFINITY
 
-        p = hex2int(self.curve.p)
-        a = hex2int(self.curve.a)
+        p = hex_to_int(self.curve.p)
+        a = hex_to_int(self.curve.a)
 
-        l = ((3 * self.x * self.x + a) * inverse_mod(2 * self.y, p)) % p
-        x3 = (l * l - 2 * self.x) % p
-        y3 = (l * (self.x - x3) - self.y) % p
+        _l = ((3 * self.x * self.x + a) * inverse_mod(2 * self.y, p)) % p
+        x3 = (_l * _l - 2 * self.x) % p
+        y3 = (_l * (self.x - x3) - self.y) % p
         return Point(self.curve, x3, y3)
 
 

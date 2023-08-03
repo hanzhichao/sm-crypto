@@ -3,6 +3,7 @@
 # @FileName     :   func.py
 # @Function     :   使用转换函数
 from random import choice
+from typing import List
 
 
 def xor(a, b) -> list:
@@ -29,11 +30,11 @@ def unpadding(data):
     return data[:-data[-1]]
 
 
-def list_to_bytes(data: list) -> bytes:
+def list_to_bytes(data: List[int]) -> bytes:
     return b''.join([bytes((i,)) for i in data])
 
 
-def bytes_to_list(data: bytes) -> list:
+def bytes_to_list(data: bytes) -> List[int]:
     return [i for i in data]
 
 

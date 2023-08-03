@@ -30,7 +30,9 @@ class Sm2P256Curve(ec.CurveFp):
 
     gx = '32C4AE2C1F1981195F9904466A39C9948FE30BBFF2660BE1715A4589334C74C7'  # 基点 Gx, 16进制字符串
     gy = 'BC3736A2F4F6779C59BDCEE36B692153D0A9877CC62A474002DF32E52139F0A0'  # 基点 Gy, 16进制字符串
-    n = 'FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123'  # 如果椭圆曲线上一点P，存在最小的正整数n使得数乘nP=O∞ ,则将n称为P的阶若n不存在，则P是无限阶的
+
+    # 如果椭圆曲线上一点P，存在最小的正整数n使得数乘nP=O∞ ,则将n称为P的阶若n不存在，则P是无限阶的
+    n = 'FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFF7203DF6B21C6052B53BBF40939D54123'
     a = 'FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFC'  # 曲线方程 y^2= x^3+ax+b 的系数a, 16进制字符串
     b = '28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93'  # 曲线方程 y^2= x^3+ax+b 的系数a, 16进制字符串
     p = 'FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFF'  # 大于3的一个大素数
@@ -154,7 +156,9 @@ class Sm2P256Curve(ec.CurveFp):
         t2 = (y1 * t2) % p  # Y1 * (x2 * T1 - X1) * (y2 * Z1) * (y2 * Z1)
         t3 = (t4 - x3) % p  # X1 * (y2 * Z1) * (y2 * Z1) - Z1 * (x2 * T1 - X1) * (y2 * Z1) * (y2 * Z1)
         t1 = (t1 * t3) % p  # (Z1 * Z1 * T2 - Y1) * Z1 * (x2 * T1 - X1) * (y2 * Z1) * (y2 * Z1)
-        # (Z1 * Z1 * T2 - Y1) * Z1 * (x2 * T1 - X1) * (y2 * Z1) * (y2 * Z1) - Y1 * (x2 * T1 - X1) * (y2 * Z1) * (y2 * Z1)
+
+        # (Z1 * Z1 * T2 - Y1) * Z1 * (x2 * T1 - X1) * (y2 * Z1) *
+        # (y2 * Z1) - Y1 * (x2 * T1 - X1) * (y2 * Z1) * (y2 * Z1)
         y3 = (t1 - t2) % p
         fmt = ('%%0%dx' % self.para_len) * 3
         return fmt % (x3, y3, z3)

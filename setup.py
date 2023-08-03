@@ -17,7 +17,7 @@ requirements = ['asn1', 'pyasn1']
 test_requirements = ['pytest>=3', ]
 
 setup(
-    name='sm_crypto',
+    name='sm-crypto',
     version=__version__,
     author=__author__,
     author_email=__email__,

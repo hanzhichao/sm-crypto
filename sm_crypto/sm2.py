@@ -14,8 +14,8 @@ import base64
 import binascii
 from typing import Union
 
-import asn1
-from pyasn1.codec.der import decoder
+from pyasn1.codec.der import decoder, encoder
+from pyasn1.type.univ import SequenceOf, Integer
 
 from . import ec, sm3
 from .utils import random_hex, hex_to_int, int_to_hex, h256, hex_to_bytes
@@ -197,26 +197,15 @@ class Sm2Signature:
     @classmethod
     def asn1_load(cls, data: bytes):
         """加载asn1序列化内容构造签名对象"""
-
-        dec = asn1.Decoder()
-        dec.start(data)
-        tag = dec.peek()
-        assert tag == (asn1.Numbers.Sequence, asn1.Types.Constructed, asn1.Classes.Universal)
-        dec.enter()
-        r_tag, r = dec.read()
-        s_tag, s = dec.read()
+        sig, _ = decoder.decode(data)
+        r, s = [tag._value for tag in sig.components]
         return cls(r, s)
 
     def asn1_dump(self) -> bytes:
         """按asn1序列化成二进制"""
-        enc = asn1.Encoder()
-        enc.start()
-        enc.enter(asn1.Numbers.Sequence)
-        enc.write(self.r)
-        enc.write(self.s)
-        enc.leave()
-        res = enc.output()
-        return res
+        seq = SequenceOf(componentType=Integer())
+        seq.extend([self.r, self.s])
+        return encoder.encode(seq)
 
 
 class Sm2PublicKey:  # TODO ec.point

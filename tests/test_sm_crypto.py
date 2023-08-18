@@ -2,10 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import pytest
+from pyasn1.type.univ import SequenceOf
 
-from sm_crypto import ec
-from sm_crypto import sm2
-from sm_crypto.utils import int_to_hex, hex_to_int
+from sm_crypto import ec, sm2
+from sm_crypto.sm2 import Sm2PublicKey
+from sm_crypto.utils import hex_to_int, int_to_hex
 
 gm_key_bytes = b'''-----BEGIN PRIVATE KEY-----
 MIGTAgEAMBMGByqGSM49AgEGCCqBHM9VAYItBHkwdwIBAQQgBpQ7OBFIJJsYCYDc
@@ -80,6 +81,18 @@ class TestPrivateKey:
         assert sig.s == 27965431025136490852414910604523392500928667941406165140535514395677029249612
 
         assert public_key.verify_with_sm3(sig, msg) is True
+
+    def test_sign_with_sm3_02(self):
+        private_key = sm2.Sm2PrivateKey('8d68cf85fdabdb8b3dae0169019dfce36497f1de874798c35232de84f015af6a')
+
+        msg = bytes.fromhex('0a06636861696e3110011a403137376332316239396237313132363863616465326566376437633234373136'
+                            '626635306430643965633762346130393862616534336464363365643762333620c1d1f7a606320c43484149'
+                            '4e5f434f4e4649473a104745545f434841494e5f434f4e464947')
+        uid_bytes = bytes.fromhex('31323334353637383132333435363738')
+        k = '3040125843fb39fd6285735c8251169767459e8df89d08343420af004ba325b4'
+        sig = private_key.sign_with_sm3(msg, k, uid_bytes)
+        assert int_to_hex(sig.r) == '999624b0d2bcfedce7f489d2479ca6b883433ef0ebe7d91815f663ce5b906e22'
+        assert int_to_hex(sig.s) == '5867e008a96a7115f222b5c87f7fb8c30d228b75cdadfdcbc4fe99cb4b384ea2'
 
     def test_sign_payload(self):
         D = 37358557871484366494697952200264103807161342851654873822879604245593248003105
@@ -230,3 +243,30 @@ def test_hex_int_bytes_change():
     y = 40618358281630434260037166415012792491669407866299925195664255417602402261586
     assert x == hex_to_int(bytes.fromhex(int_to_hex(x)).hex())
     assert y == hex_to_int(bytes.fromhex(int_to_hex(y)).hex())
+
+
+def test_load_public_key_pem():
+    pem_bytes = b'''-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAERmeDTL7vugKqNgrSwUqH5D4kj0h2
+6XJLXLYgoS1+yoNWuaXfSqEFAUmqbfttoZU/h+cPhzP7VoDG6jbzu4pvAw==
+-----END PUBLIC KEY-----
+'''
+
+    pk = Sm2PublicKey.from_pem(pem_bytes)
+    assert '4667834cbeefba02aa360ad2c14a87e43e248f4876e9724b5cb620a12d7eca83' == pk.x
+    assert '56b9a5df4aa1050149aa6dfb6da1953f87e70f8733fb5680c6ea36f3bb8a6f03' == pk.y
+
+
+def test_dump_public_key():
+    x = '4667834cbeefba02aa360ad2c14a87e43e248f4876e9724b5cb620a12d7eca83'
+    y = '56b9a5df4aa1050149aa6dfb6da1953f87e70f8733fb5680c6ea36f3bb8a6f03'
+    pk = Sm2PublicKey(x=x, y=y)
+
+    pem_bytes = b'''-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAERmeDTL7vugKqNgrSwUqH5D4kj0h2
+6XJLXLYgoS1+yoNWuaXfSqEFAUmqbfttoZU/h+cPhzP7VoDG6jbzu4pvAw==
+-----END PUBLIC KEY-----
+'''
+    print()
+    assert repr(pem_bytes.decode()) == repr(pk.public_bytes().decode())
+

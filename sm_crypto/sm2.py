@@ -15,13 +15,14 @@ import binascii
 from typing import Union
 
 from pyasn1.codec.der import decoder, encoder
-from pyasn1.type.univ import SequenceOf, Integer
+from pyasn1.type.univ import BitString, Integer, OctetString, SequenceOf
 
-from . import ec, sm3
-from .utils import random_hex, hex_to_int, int_to_hex, h256, hex_to_bytes
+from . import ec, sm2_asn1, sm3
+from .utils import h256, hex_to_bytes, hex_to_int, int_to_hex, random_hex
 
 # 默认用户A id
 CRYPTO_DEFAULT_UID = b'1234567812345678'
+PARA_LEN = 64
 
 
 class Sm2P256Curve(ec.CurveFp):
@@ -42,7 +43,7 @@ class Sm2P256Curve(ec.CurveFp):
 
     @property
     def para_len(self) -> int:
-        return len(self.n)
+        return len(self.n)  # 64
 
     def scalar_mul(self, k: int, point: str) -> str:
         """
@@ -195,7 +196,7 @@ class Sm2Signature:
         return '<Sm2Signature r="%d" s="%d">' % (self.r, self.s)
 
     @classmethod
-    def asn1_load(cls, data: bytes):
+    def asn1_load(cls, data: bytes) -> "Sm2Signature":
         """加载asn1序列化内容构造签名对象"""
         sig, _ = decoder.decode(data)
         r, s = [tag._value for tag in sig.components]
@@ -217,12 +218,8 @@ class Sm2PublicKey:  # TODO ec.point
     def __init__(self, x: str, y: str, curve: Sm2P256Curve = sm2p256v1):
         self.curve: Sm2P256Curve = curve
         assert curve.is_on_curve(x=hex_to_int(x), y=hex_to_int(y)), '公钥点x,y不在曲线上'
-
-        # 公钥X坐标, 16进制字符串
-        self.x = x
-
-        # 公钥Y坐标, 16进制字符串
-        self.y = y
+        self.x = x  # 公钥X坐标, 16进制字符串
+        self.y = y  # 公钥Y坐标, 16进制字符串
 
     def __repr__(self):
         return '<Sm2PublicKey x="%s" y="%s">' % (self.x, self.y)
@@ -308,7 +305,9 @@ class Sm2PublicKey:  # TODO ec.point
             return None
         else:
             form = '%%0%dx' % msg_length
+            # C2 为密文，与明文长度等长
             c2 = form % (int(msg, 16) ^ int(t, 16))
+            # C3 为 SM3 算法对明文数计算得到消息摘要，长度固定为 256 位
             c3 = sm3.sm3_hash([i for i in hex_to_bytes(x2, msg, y2)])
             if mode:
                 return hex_to_bytes(c1, c3, c2)
@@ -316,6 +315,12 @@ class Sm2PublicKey:  # TODO ec.point
                 return hex_to_bytes(c1, c2, c3)
 
     def _verify(self, sig: Sm2Signature, msg_digest: bytes):
+        """
+        验证签名及消息摘要
+        :param sig: 签名对象
+        :param msg_digest: 消息摘要
+        :return:
+        """
         # 验签函数，sign签名r||s，E消息hash，public_key公钥
         r, s = sig.r, sig.s
 
@@ -342,10 +347,57 @@ class Sm2PublicKey:  # TODO ec.point
         x = int(point1[0:self.curve.para_len], 16)
         return r == (e + x) % n
 
-    def verify_with_sm3(self, sig: Sm2Signature, msg: bytes, uid: bytes = CRYPTO_DEFAULT_UID):
+    def verify_with_sm3(self, sig: Sm2Signature, msg: bytes, uid: bytes = CRYPTO_DEFAULT_UID) -> bool:
+        """
+        签名验证
+        :param sig: 签名对象
+        :param msg: 原始消息
+        :param uid: 用户UID
+        :return: 验证成功返回True，否则返回False
+        """
         digest = self.sm3_digest(msg, uid)  # 消息摘要
         sign_data = binascii.a2b_hex(digest.encode('utf-8'))
         return self._verify(sig, sign_data)
+
+    def public_bytes(self) -> bytes:
+        return self.to_pem()
+
+    @classmethod
+    def from_pem(cls, pem_bytes) -> "Sm2PublicKey":
+        pem_bytes = pem_bytes.rstrip(b'\n')
+        body = b'\n'.join(pem_bytes.split(b'\n')[1:-1])  # 去掉前后两行
+        body_bytes = base64.b64decode(body)
+        # der, _ = decoder.decode(body_bytes)
+        # value = int_to_hex(der.components[1]._value)
+        # value = value[2:]  # 去掉开头的04
+        # x, y = value[:64], value[64:]
+        # return cls(x=x, y=y)
+        return cls.asn1_load(body_bytes)
+
+    @classmethod
+    def asn1_load(cls, data: bytes) -> "Sm2PublicKey":
+        public_key, _ = decoder.decode(data, asn1Spec=sm2_asn1.SM2PublicKey())
+        value = ''.join('%.2x' % x for x in public_key['publicKey'].asNumbers())
+        # 去掉开头的04
+        value = value[2:]
+        x, y = value[:64], value[64:]
+        return cls(x=x, y=y)
+
+    def asn1_dump(self) -> bytes:
+        pkcs8_key = sm2_asn1.SM2PublicKey()
+        pkcs8_key["algorithm"] = sm2_asn1.sm2_algorithm
+        value = '04%s%s' % (self.x, self.y)
+        pkcs8_key["publicKey"] = BitString(hexValue=value)
+        der = encoder.encode(pkcs8_key)
+        return der
+
+    def to_pem(self) -> bytes:
+        der = self.asn1_dump()
+        body = base64.b64encode(der)
+        lines = [b'-----BEGIN PUBLIC KEY-----']
+        lines.extend([body[i:i + PARA_LEN] for i in range(0, len(body), PARA_LEN)])
+        lines.append(b'-----END PUBLIC KEY-----\n')
+        return b'\n'.join(lines)
 
 
 class Sm2PrivateKey:
@@ -358,9 +410,9 @@ class Sm2PrivateKey:
         # 私钥本质上就是一个256位的随机整数, 16进制字符串, 私钥可以由d表示
         self.value = value  # int(value, 16) < n
         # 公钥对象
-        self.public_key = self._get_public_key()
+        self._public_key = self._get_public_key()
 
-        self.para_len = len(self.public_key.curve.n)  # 64
+        self.para_len = len(self._public_key.curve.n)  # 64
 
     def __repr__(self):
         return '<Sm2PrivateKey "%s">' % self.value
@@ -370,10 +422,14 @@ class Sm2PrivateKey:
         公钥
         :return: 公钥对象
         """
-        return self.public_key
+        return self._public_key
 
     def _get_public_key(self, curve=sm2p256v1):
-        """根据曲线及私钥数字d通过kG计算出公钥"""
+        """
+        根据曲线及私钥数字d通过kG计算出公钥
+        :param curve:
+        :return:
+        """
         point_g = ec.Point(curve, hex_to_int(curve.gx), hex_to_int(curve.gy))
         private_key_value = hex_to_int(self.value)  # 私钥
         point_public_key = point_g * private_key_value  # 公钥
@@ -387,7 +443,7 @@ class Sm2PrivateKey:
         :return: 签名待r,s
         """
         # 消息, 私钥数字D, 随机数K, 曲线阶N 转int
-        curve = self.public_key.curve
+        curve = self._public_key.curve
 
         e, d, random_key, n = map(hex_to_int, [msg_digest.hex(), self.value, random_key, curve.n])
 
@@ -420,24 +476,34 @@ class Sm2PrivateKey:
         :param uid:
         :return:
         """
-        digest_hex = self.public_key.sm3_digest(msg, uid)  # 消息摘要
+        digest_hex = self._public_key.sm3_digest(msg, uid)  # 消息摘要
         msg_digest = binascii.a2b_hex(digest_hex.encode('utf-8'))
         if random_key is None:
             random_key = random_hex(self.para_len)
         r, s = self._sign(msg_digest, random_key)  # 16进制
         return Sm2Signature(r, s)
 
+    def sign(self, msg: bytes, random_key: str = None, uid: bytes = CRYPTO_DEFAULT_UID, hash_type='SM3') -> bytes:
+        return self.sign_with_sm3(msg, random_key, uid).asn1_dump()
+
     def decrypt(self, data: bytes, mode=1):
-        # 解密函数，data密文（bytes） mode: 0-C1C2C3, 1-C1C3C2 (default is 1)
-        curve = self.public_key.curve
+        """
+        解密函数
+        :param data: 密文
+        :param mode: mode: 0-C1C2C3, 1-C1C3C2 (default is 1)
+        :return: None
+        """
+        curve = self._public_key.curve
         para_len = curve.para_len
 
         data = data.hex()
         len_2 = 2 * para_len
         len_3 = len_2 + 64
 
+        # C1 为随机产生的公钥
         C1 = data[0:len_2]
         if mode == 1:  # C1C3C2
+            # C2 为密文，与明文长度等长
             C2 = data[len_3:]
         else:  # C1C2C3
             C2 = data[len_2:-para_len]
@@ -455,9 +521,39 @@ class Sm2PrivateKey:
 
     @classmethod
     def from_pem(cls, pem_bytes: bytes):
+        """
+        从PEM加载私钥
+        :param pem_bytes: 私钥PEM二进制
+        :return: Sm2PrivateKey对象
+        """
+        pem_bytes = pem_bytes.rstrip(b'\n')
         body = b'\n'.join(pem_bytes.split(b'\n')[1:-1])  # 去掉前后两行
-        body_bytes = base64.b64decode(body)
-        der, _ = decoder.decode(body_bytes)
-        # print(der.prettyPrint())
-        secret = der.components[2]._value.hex()
-        return cls(secret)
+        data = base64.b64decode(body)
+        # der, _ = decoder.decode(body_bytes)
+        # secret = der.components[2]._value.hex()
+        # return cls(secret)
+        return cls.asn1_load(data)
+
+    @classmethod
+    def asn1_load(cls, data: bytes) -> "Sm2PrivateKey":
+        private_key, _ = decoder.decode(data, asn1Spec=sm2_asn1.SM2PrivateKey())
+        value = ''.join('%.2x' % x for x in private_key['privateKey'].asNumbers())
+        return cls(value=value)
+
+    def asn1_dump(self) -> bytes:
+        pkcs1_key = OctetString(hexValue=self.value)
+
+        pkcs8_key = sm2_asn1.SM2PrivateKey()
+        pkcs8_key["version"] = 0
+        pkcs8_key["algorithm"] = sm2_asn1.sm2_algorithm
+        pkcs8_key["privateKey"] = pkcs1_key
+        der = encoder.encode(pkcs8_key)
+        return der
+
+    def to_pem(self) -> bytes:
+        der = self.asn1_dump()
+        body = base64.b64encode(der)
+        lines = [b'-----BEGIN PRIVATE KEY-----']
+        lines.extend([body[i:i + PARA_LEN] for i in range(0, len(body), PARA_LEN)])
+        lines.append(b'-----END PRIVATE KEY-----\n')
+        return b'\n'.join(lines)

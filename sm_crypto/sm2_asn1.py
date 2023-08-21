@@ -1,7 +1,7 @@
 from pyasn1.type import namedtype, univ
 
-SM2_OID = '1.2.156.10197.1.301'
-EC_PUBLIC_KEY_OID = '1.2.840.10045.2.1'
+SM2_OID = '1.2.840.10045.2.1'
+EC_PUBLIC_KEY_OID = '1.2.156.10197.1.301'
 
 
 class AlgorithmIdentifier(univ.Sequence):
@@ -22,7 +22,7 @@ class SM2PublicKey(univ.Sequence):
 class SM2PrivateKey(univ.Sequence):
     componentType = namedtype.NamedTypes(
         namedtype.NamedType('version', univ.Integer()),
-        namedtype.NamedType('algorithm', AlgorithmIdentifier()),
+        namedtype.NamedType('privateKeyAlgorithm', AlgorithmIdentifier()),
         namedtype.NamedType('privateKey', univ.OctetString()),
     )
 

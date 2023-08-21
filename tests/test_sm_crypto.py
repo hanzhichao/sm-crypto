@@ -5,7 +5,7 @@ import pytest
 from pyasn1.type.univ import SequenceOf
 
 from sm_crypto import ec, sm2
-from sm_crypto.sm2 import Sm2PublicKey
+from sm_crypto.sm2 import SM2PrivateKey, SM2PublicKey
 from sm_crypto.utils import hex_to_int, int_to_hex
 
 gm_key_bytes = b'''-----BEGIN PRIVATE KEY-----
@@ -21,14 +21,14 @@ def public_key():
     """SM2公钥"""
     pub_x = 86486910365053747502063228060823248590345160013865894637560355242509364288962
     pub_y = 101181106946091265431204246512408544766318122779614061831337312322228957210561
-    public_key = sm2.Sm2PublicKey(int_to_hex(pub_x), int_to_hex(pub_y))
+    public_key = sm2.SM2PublicKey(int_to_hex(pub_x), int_to_hex(pub_y))
     return public_key
 
 
 @pytest.fixture()
 def private_key():
     D = 72365085398694144586688860843300263721740873715599498623547807927292312544749
-    private_key = sm2.Sm2PrivateKey(int_to_hex(D))
+    private_key = sm2.SM2PrivateKey(int_to_hex(D))
     return private_key
 
 
@@ -51,13 +51,13 @@ class TestPublicKey:
 
     def test_sm3_digest(self, public_key):
         msg = b'test'
-        digest = public_key.sm3_digest(msg)
+        digest = public_key._get_digest(msg)
         assert digest == 'd2ecada8e3e418e3dcd3b6c33888516ae89ee6ddc3c28f82f27c10fcafe4f6b0'
 
     def test_verify_with_sm3(self, public_key):
         r = 61084790583518678668921497484069524443200446623941418485868065414529830776921
         s = 27965431025136490852414910604523392500928667941406165140535514395677029249612
-        signature = sm2.Sm2Signature(r, s)
+        signature = sm2.SM2Signature(r, s)
         msg = b'test'
         result = public_key.verify_with_sm3(signature, msg)
         print(result)
@@ -83,7 +83,7 @@ class TestPrivateKey:
         assert public_key.verify_with_sm3(sig, msg) is True
 
     def test_sign_with_sm3_02(self):
-        private_key = sm2.Sm2PrivateKey('8d68cf85fdabdb8b3dae0169019dfce36497f1de874798c35232de84f015af6a')
+        private_key = sm2.SM2PrivateKey('8d68cf85fdabdb8b3dae0169019dfce36497f1de874798c35232de84f015af6a')
 
         msg = bytes.fromhex('0a06636861696e3110011a403137376332316239396237313132363863616465326566376437633234373136'
                             '626635306430643965633762346130393862616534336464363365643762333620c1d1f7a606320c43484149'
@@ -101,14 +101,14 @@ class TestPrivateKey:
                             'e5f51554552593a0e4745545f434841494e5f494e464f')
         k = '277e11bb58bdec2f681fdb0d9fade5e37d0b2498980ba654321b9a7dffca526b'
 
-        private_key = sm2.Sm2PrivateKey(int_to_hex(D))
+        private_key = sm2.SM2PrivateKey(int_to_hex(D))
         sig = private_key.sign_with_sm3(msg, k)
         assert sig.r == 28433366858890048214993446265910046009847155747547907491830611928704638157369
         assert sig.s == 30529410057581304868817267597301739762941484125893063962167067250241894976898
 
     def test_load_pem_to_sm_private_key(self):
-        sk = sm2.Sm2PrivateKey.from_pem(gm_key_bytes)
-        pk = sk.public_key
+        sk = sm2.SM2PrivateKey.from_pem(gm_key_bytes)
+        pk = sk.public_key()
         msg = b'test'
         k = int_to_hex(17862946205452999060962975573530209623112644258847452921350520798185987396203)
         sig = sk.sign_with_sm3(msg, k)
@@ -117,7 +117,7 @@ class TestPrivateKey:
     @pytest.mark.skip('待修复')
     def test_sign_load_key_and_sign_payload(self):
         """测试加载私钥并生成sm2签名"""
-        private_key = sm2.Sm2PrivateKey.from_pem(gm_key_bytes)
+        private_key = sm2.SM2PrivateKey.from_pem(gm_key_bytes)
         assert 2975779171698260078424564863478648882602251361876014642985074985594977642230 == hex_to_int(
             private_key.value)
 
@@ -147,7 +147,7 @@ class TestPrivateKey:
         assert msg == b'test'
 
     def test_get_public_key(self, private_key):
-        assert private_key._get_public_key() == private_key.public_key
+        assert private_key._get_public_key() == private_key.public_key()
 
 
 class TestCurve:
@@ -201,8 +201,8 @@ class TestPoint:
     def test_get_public_key_from_private_key(self, private_key, G):
         k = hex_to_int(private_key.value)
         K = G * k
-        pub_x = hex_to_int(private_key.public_key.x)
-        pub_y = hex_to_int(private_key.public_key.y)
+        pub_x = hex_to_int(private_key.public_key().x)
+        pub_y = hex_to_int(private_key.public_key().y)
 
         assert K.x == pub_x and K.y == pub_y
 
@@ -221,7 +221,7 @@ class TestSM2P256Curve:
 class TestSignature:
     def test_asn1_dump(self):
         """测试asn1序列化签名"""
-        sig = sm2.Sm2Signature(r=28433366858890048214993446265910046009847155747547907491830611928704638157369,
+        sig = sm2.SM2Signature(r=28433366858890048214993446265910046009847155747547907491830611928704638157369,
                                s=30529410057581304868817267597301739762941484125893063962167067250241894976898)
 
         data = sig.asn1_dump()
@@ -232,7 +232,7 @@ class TestSignature:
         """测试asn1反列化签名"""
         data = bytes.fromhex('304402203edcb72060a1c7236058bbd3976000fcd0609ebfd844647cc80d18f8c1ea82390220437f08a39fd8'
                              '05d0fb34d94e6a4d2602a396052e6311c1e90d5c9c8709b18d82')
-        sig = sm2.Sm2Signature.asn1_load(data)
+        sig = sm2.SM2Signature.asn1_load(data)
         assert sig.r == 28433366858890048214993446265910046009847155747547907491830611928704638157369
         assert sig.s == 30529410057581304868817267597301739762941484125893063962167067250241894976898
 
@@ -252,7 +252,7 @@ MFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAERmeDTL7vugKqNgrSwUqH5D4kj0h2
 -----END PUBLIC KEY-----
 '''
 
-    pk = Sm2PublicKey.from_pem(pem_bytes)
+    pk = SM2PublicKey.from_pem(pem_bytes)
     assert '4667834cbeefba02aa360ad2c14a87e43e248f4876e9724b5cb620a12d7eca83' == pk.x
     assert '56b9a5df4aa1050149aa6dfb6da1953f87e70f8733fb5680c6ea36f3bb8a6f03' == pk.y
 
@@ -260,13 +260,44 @@ MFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAERmeDTL7vugKqNgrSwUqH5D4kj0h2
 def test_dump_public_key():
     x = '4667834cbeefba02aa360ad2c14a87e43e248f4876e9724b5cb620a12d7eca83'
     y = '56b9a5df4aa1050149aa6dfb6da1953f87e70f8733fb5680c6ea36f3bb8a6f03'
-    pk = Sm2PublicKey(x=x, y=y)
+    pk = SM2PublicKey(x=x, y=y)
 
     pem_bytes = b'''-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAERmeDTL7vugKqNgrSwUqH5D4kj0h2
 6XJLXLYgoS1+yoNWuaXfSqEFAUmqbfttoZU/h+cPhzP7VoDG6jbzu4pvAw==
 -----END PUBLIC KEY-----
 '''
-    print()
     assert repr(pem_bytes.decode()) == repr(pk.public_bytes().decode())
 
+
+
+def test_load_private_key_pem():
+    pem_bytes = b'''-----BEGIN PRIVATE KEY-----
+MIGTAgEAMBMGByqGSM49AgEGCCqBHM9VAYItBHkwdwIBAQQgjWjPhf2r24s9rgFp
+AZ3842SX8d6HR5jDUjLehPAVr2qgCgYIKoEcz1UBgi2hRANCAARGZ4NMvu+6Aqo2
+CtLBSofkPiSPSHbpcktctiChLX7Kg1a5pd9KoQUBSapt+22hlT+H5w+HM/tWgMbq
+NvO7im8D
+-----END PRIVATE KEY-----
+'''
+    sk = SM2PrivateKey.from_pem(pem_bytes)
+    assert sk.value == ('307702010104208d68cf85fdabdb8b3dae0169019dfce36497f1'
+                        'de874798c35232de84f015af6aa00a06082a811ccf5501822da1'
+                        '44034200044667834cbeefba02aa360ad2c14a87e43e248f4876'
+                        'e9724b5cb620a12d7eca8356b9a5df4aa1050149aa6dfb6da195'
+                        '3f87e70f8733fb5680c6ea36f3bb8a6f03')
+
+
+def test_dump_private_key_pem():
+    value = ('307702010104208d68cf85fdabdb8b3dae0169019dfce36497f1de874798c35'
+             '232de84f015af6aa00a06082a811ccf5501822da144034200044667834cbeef'
+             'ba02aa360ad2c14a87e43e248f4876e9724b5cb620a12d7eca8356b9a5df4aa'
+             '1050149aa6dfb6da1953f87e70f8733fb5680c6ea36f3bb8a6f03')
+    sk = SM2PrivateKey(value=value)
+    pem_bytes = b'''-----BEGIN PRIVATE KEY-----
+MIGTAgEAMBMGByqGSM49AgEGCCqBHM9VAYItBHkwdwIBAQQgjWjPhf2r24s9rgFp
+AZ3842SX8d6HR5jDUjLehPAVr2qgCgYIKoEcz1UBgi2hRANCAARGZ4NMvu+6Aqo2
+CtLBSofkPiSPSHbpcktctiChLX7Kg1a5pd9KoQUBSapt+22hlT+H5w+HM/tWgMbq
+NvO7im8D
+-----END PRIVATE KEY-----
+'''
+    assert sk.to_pem() == pem_bytes

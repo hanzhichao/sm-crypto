@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import time
 
 import pytest
 from pyasn1.type.univ import SequenceOf
@@ -224,7 +225,7 @@ class TestSignature:
         sig = sm2.SM2Signature(r=28433366858890048214993446265910046009847155747547907491830611928704638157369,
                                s=30529410057581304868817267597301739762941484125893063962167067250241894976898)
 
-        data = sig.asn1_dump()
+        data = sig.dump()
         assert data.hex() == ('304402203edcb72060a1c7236058bbd3976000fcd0609ebfd844647cc80d18f8c1ea82390220437f08a39fd8'
                               '05d0fb34d94e6a4d2602a396052e6311c1e90d5c9c8709b18d82')
 
@@ -232,7 +233,7 @@ class TestSignature:
         """测试asn1反列化签名"""
         data = bytes.fromhex('304402203edcb72060a1c7236058bbd3976000fcd0609ebfd844647cc80d18f8c1ea82390220437f08a39fd8'
                              '05d0fb34d94e6a4d2602a396052e6311c1e90d5c9c8709b18d82')
-        sig = sm2.SM2Signature.asn1_load(data)
+        sig = sm2.SM2Signature.load(data)
         assert sig.r == 28433366858890048214993446265910046009847155747547907491830611928704638157369
         assert sig.s == 30529410057581304868817267597301739762941484125893063962167067250241894976898
 
@@ -270,7 +271,6 @@ MFkwEwYHKoZIzj0CAQYIKoEcz1UBgi0DQgAERmeDTL7vugKqNgrSwUqH5D4kj0h2
     assert repr(pem_bytes.decode()) == repr(pk.public_bytes().decode())
 
 
-
 def test_load_private_key_pem():
     pem_bytes = b'''-----BEGIN PRIVATE KEY-----
 MIGTAgEAMBMGByqGSM49AgEGCCqBHM9VAYItBHkwdwIBAQQgjWjPhf2r24s9rgFp
@@ -301,3 +301,16 @@ NvO7im8D
 -----END PRIVATE KEY-----
 '''
     assert sk.to_pem() == pem_bytes
+
+
+# @pytest.mark.skip(reason='just for perf test')
+def test_sign_performance():
+    """测试签名性能"""
+    data = bytes.fromhex('0a06636861696e3110011a40646365356331313330303466343034626136376665643462646366646365326533386'
+                         '5306161366263326533343962396261633430386535663264613234323720a9a08bb306320c434841494e5f434f4e'
+                         '4649473a104745545f434841494e5f434f4e464947')
+    start_time = time.time()
+    for i in range(1000):
+        private_key = SM2PrivateKey("b0d08286dd263dec659a49b1d978cb53a0ae2a137ac7fb17f2e569692004cf59")
+        sig = private_key.sign(data)
+    print("耗时", time.time() - start_time)

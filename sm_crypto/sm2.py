@@ -12,6 +12,7 @@ ZA=h256(ENTLA || IDA || a || b || xG || yG|| xA || yA)。
 """
 import base64
 import binascii
+import hashlib
 import typing
 from typing import Union
 
@@ -430,9 +431,11 @@ class SM2PrivateKey:
         # 私钥本质上就是一个256位的随机整数, 16进制字符串, 私钥可以由d表示
         self.value = value  # int(value, 16) < n
         # 公钥对象
-        self._public_key = self._get_public_key()
+        self._public_key = None
+        self.curve = sm2p256v1
 
-        self.para_len = len(self._public_key.curve.n)  # 64
+        # self.para_len = len(self._public_key.curve.n)  # 64
+        self.para_len = 64
 
     def __repr__(self):
         return '<SM2PrivateKey "%s">' % self.value
@@ -442,6 +445,8 @@ class SM2PrivateKey:
         公钥
         :return: 公钥对象
         """
+        if self._public_key is None:
+            self._public_key = self._get_public_key()
         return self._public_key
 
     def _get_public_key(self, curve=sm2p256v1):
@@ -454,6 +459,12 @@ class SM2PrivateKey:
         private_key_value = hex_to_int(self.value)  # 私钥
         point_public_key = point_g * private_key_value  # 公钥
         return SM2PublicKey(int_to_hex(point_public_key.x), int_to_hex(point_public_key.y), curve=curve)
+        # FIXME 使用下方算法得到的公钥与上方不一致
+        # private_key_value = hex_to_int(self.value)  # 私钥
+        # point_public_key = self.curve.scalar_base_mul(private_key_value)
+        # x = point_public_key[:64]
+        # y = point_public_key[64:]
+        # return SM2PublicKey(x, y, curve)
 
     def _sign(self, data_digest: bytes, random_key: str) -> (int, int):
         """
@@ -463,7 +474,8 @@ class SM2PrivateKey:
         :return: 签名待r,s
         """
         # 消息, 私钥数字D, 随机数K, 曲线阶N 转int
-        curve = self._public_key.curve
+        # curve = self._public_key.curve
+        curve = self.curve
 
         e, d, random_key, n = map(hex_to_int, [data_digest.hex(), self.value, random_key, curve.n])
 
@@ -496,7 +508,7 @@ class SM2PrivateKey:
         :param uid:
         :return:
         """
-        digest_hex = self._public_key._get_digest(data, uid)  # 消息摘要
+        digest_hex = self.public_key()._get_digest(data, uid)  # 消息摘要
         data_digest = binascii.a2b_hex(digest_hex.encode('utf-8'))
         if random_key is None:
             random_key = random_hex(self.para_len)
@@ -504,7 +516,18 @@ class SM2PrivateKey:
         return SM2Signature(r, s)
 
     def sign(self, data: bytes, random_key: str = None, uid: bytes = DEFAULT_UID, hash_type='SM3') -> bytes:
-        return self.sign_with_sm3(data, random_key, uid).dump()
+        if hash_type == 'SM3':
+            return self.sign_with_sm3(data, random_key, uid).dump()
+        if hash_type == 'SHA256':
+            data_digest = hashlib.sha256(data).digest()
+        elif hash_type == 'SHA3_256':
+            data_digest = hashlib.sha3_256(data).digest()
+        else:
+            raise NotImplementedError('仅支持hash_type=SM3/SHA256或SHA3_256')
+        if random_key is None:
+            random_key = random_hex(self.para_len)
+        r, s = self._sign(data_digest, random_key)  # 16进制
+        return SM2Signature(r, s).dump()
 
     def decrypt(self, data: bytes, mode=1):
         """
@@ -513,7 +536,8 @@ class SM2PrivateKey:
         :param mode: mode: 0-C1C2C3, 1-C1C3C2 (default is 1)
         :return: None
         """
-        curve = self._public_key.curve
+        # curve = self._public_key.curve
+        curve = self.curve
         para_len = curve.para_len
 
         data = data.hex()

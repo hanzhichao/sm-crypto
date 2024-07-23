@@ -146,8 +146,6 @@ def sm3_hash(msg: Union[bytes, List[int]]) -> str:  # todo fixme
 
 
 def sm3_kdf(z: bytes, klen: int):  # z为16进制表示的比特串（str），klen为密钥长度（单位byte）
-    print(type(z), z)
-    print(type(klen), klen)
     klen = int(klen)  # 4
     ct = 0x00000001
     rcnt = ceil(klen / 32)

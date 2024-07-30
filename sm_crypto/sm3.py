@@ -34,6 +34,8 @@ def sm3_ff_j(x, y, z, j):
         ret = x ^ y ^ z
     elif 16 <= j and j < 64:
         ret = (x & y) | (x & z) | (y & z)
+    else:
+        raise ValueError("j is out of range")
     return ret
 
 
@@ -43,6 +45,8 @@ def sm3_gg_j(x, y, z, j):
     elif 16 <= j and j < 64:
         # ret = (X | Y) & ((2 ** 32 - 1 - X) | Z)
         ret = (x & y) | ((~ x) & z)
+    else:
+        raise ValueError("j is out of range")
     return ret
 
 

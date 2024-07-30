@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # @FileName     :   func.py
 # @Function     :   使用转换函数
-from random import choice
 from typing import List
 
 
@@ -38,26 +37,9 @@ def bytes_to_list(data: bytes) -> List[int]:
     return [i for i in data]
 
 
-def random_hex(n: int) -> str:
-    return ''.join([choice('0123456789abcdef') for _ in range(n)])
-
-
-def int_to_hex(num: int) -> str:
-    return hex(num)[2:] if len(hex(num)) % 2 == 0 else '0' + hex(num)[2:]
-
-
 def hex_to_int(hex_str: str) -> int:
     return int(hex_str, 16)
 
 
 def hex_to_bytes(*args: str) -> bytes:
-    return bytes.fromhex(''.join(args))
-
-
-def get_mask(para_len):
-    return int('8' + '0' * (para_len - 1), 16)
-
-
-def h256(*args) -> bytes:
-    """拼接所有16进制字符串 并转为 二进制"""
     return bytes.fromhex(''.join(args))

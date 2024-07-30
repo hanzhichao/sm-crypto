@@ -4,8 +4,8 @@
 # @Function     :   SM4算法实现
 import copy
 
-from .utils import xor, rotl, get_uint32_be, put_uint32_be, \
-    bytes_to_list, list_to_bytes, padding, unpadding
+from .utils import (xor, rotl, get_uint32_be, put_uint32_be,
+                    bytes_to_list, list_to_bytes, padding, unpadding)
 
 # Expanded SM4 box table
 SM4_BOXES_TABLE = [
@@ -48,7 +48,7 @@ SM4_ENCRYPT = 0
 SM4_DECRYPT = 1
 
 
-class CryptSM4(object):
+class SM4:
 
     def __init__(self, mode=SM4_ENCRYPT):
         self.sk = [0] * 32

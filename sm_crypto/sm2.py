@@ -11,7 +11,6 @@ ZA=h256(ENTLA || IDA || a || b || xG || yG|| xA || yA)。
 数字签名(r,s)
 """
 import base64
-import binascii
 import hashlib
 import random
 
@@ -176,9 +175,9 @@ class SM2PublicKey(CurvePoint):
 
     @classmethod
     def from_hex(cls, value: str, curve=sm2p256v1) -> "SM2PublicKey":
-        l = curve.key_size // 4
-        assert len(value) % l == 0
-        x, y = int(value[:l], 16), int(value[l], 16)
+        para_len = curve.key_size // 4  # 64
+        # assert len(value) % para_len == 0
+        x, y = int(value[:para_len], 16), int(value[para_len:], 16)
         return cls(x=x, y=y, curve=curve)
 
     @staticmethod
